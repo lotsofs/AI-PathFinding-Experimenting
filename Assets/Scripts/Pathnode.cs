@@ -126,7 +126,7 @@ public class Pathnode : MonoBehaviour {
             currentNode = dest;
             while (currentNode != this) {
                 currentNodeIndex = closedNodes.IndexOf(currentNode);
-                Debug.DrawLine(currentNode.transform.position, previousNodeClosed[currentNodeIndex].transform.position, Color.red, 20000);
+                Debug.DrawLine(currentNode.transform.position, previousNodeClosed[currentNodeIndex].transform.position, Color.red, 20);
                 currentNode = previousNodeClosed[currentNodeIndex];
             }
             print("Destination reached. Shortest path: " + shortestKnownPath);
