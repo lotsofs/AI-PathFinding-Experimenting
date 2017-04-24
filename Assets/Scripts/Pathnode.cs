@@ -38,10 +38,21 @@ public class Pathnode : MonoBehaviour {
 	// This script is completely useless, it will form just the foundation for actual scripts that involve moving.
 	public void Update() {
         if (activated) {
+			ResetPlot();
             activated = false;
             PlotMove(destinationNode);
         }
     }
+
+	// Reset all the stuff so that it can find a path more than once. (In case the situation changes)
+	public void ResetPlot() {
+		openNodes.Clear();
+		fDistances.Clear();
+		gDistances.Clear();
+		previousNode.Clear();
+		closedNodes.Clear();
+		previousNodeClosed.Clear();
+	}
 
     public void PlotMove(Pathnode dest) {
         shortestKnownPath = Mathf.Infinity;
