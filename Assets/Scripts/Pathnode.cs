@@ -7,6 +7,8 @@ public class Pathnode : MonoBehaviour {
 	public Pathnode[] linkedNodes;
 	public bool activated = false;
 
+	public bool isPathNode = false;
+
 	// stuff used for finding the path
 	public Pathnode destinationNode;
 	List<Pathnode> openNodes = new List<Pathnode>();
@@ -34,15 +36,38 @@ public class Pathnode : MonoBehaviour {
 		}
 	}
 
-	// If this node gets activated, it will draw a red line from this node to its destination. 
-	// This script is completely useless, it will form just the foundation for actual scripts that involve moving.
 	public void Update() {
-        if (activated) {
-			ResetPlot();
-            activated = false;
-            PlotMove(destinationNode);
-        }
-    }
+		if (activated) {
+			PlotMove();
+		}
+	}
+
+	// 
+	public void PlotMove() {
+		ResetPlot();
+		//activated = false;
+
+		// If the destination is not a pathnode, then find the nearest to it
+		Pathnode dest;
+		if (destinationNode.isPathNode == false) {
+			dest = FindClosestPathnodeToEnd();
+		}
+		else {
+			dest = destinationNode;
+		}
+		// If the start is not a pathnode, then find the nearest to it
+		if (linkedNodes.Length == 0) {
+			FindClosestPathnodeToStart(dest);
+		}
+		else {
+			//add the start node to the open Nodes set
+			openNodes.Add(this);
+			fDistances.Add(Vector3.Distance(transform.position, dest.transform.position));
+			gDistances.Add(0);
+			previousNode.Add(null);
+		}
+		FindPath(dest);
+	}
 
 	// Reset all the stuff so that it can find a path more than once. (In case the situation changes)
 	public void ResetPlot() {
@@ -54,15 +79,50 @@ public class Pathnode : MonoBehaviour {
 		previousNodeClosed.Clear();
 	}
 
-    public void PlotMove(Pathnode dest) {
+	// Adds the closest Pathnode to the finish point to the open nodes set
+	public Pathnode FindClosestPathnodeToEnd() {
+		GameObject[] nodes = GameObject.FindGameObjectsWithTag("Pathnode");
+		GameObject closestNode = null;
+		float distance = Mathf.Infinity;
+		Vector3 position = destinationNode.transform.position;
+		foreach (GameObject node in nodes) {
+			Vector3 diff = node.transform.position - position;
+			float curDistance = diff.sqrMagnitude;
+			if (curDistance < distance) {
+				closestNode = node;
+				distance = curDistance;
+			}
+		}
+		return closestNode.GetComponent<Pathnode>();
+	}
+
+	// Adds the closest Pathnode to the start point to the open nodes set
+	public void FindClosestPathnodeToStart(Pathnode dest) {
+		GameObject[] nodes = GameObject.FindGameObjectsWithTag("Pathnode");
+		GameObject closestNode = null;
+		float distance = Mathf.Infinity;
+		Vector3 position = transform.position;
+		foreach (GameObject node in nodes) {
+			Vector3 diff = node.transform.position - position;
+			float curDistance = diff.sqrMagnitude;
+			if (curDistance < distance) {
+				closestNode = node;
+				distance = curDistance;
+			}
+		}
+
+		float gDist = Vector3.Distance(transform.position, closestNode.transform.position);
+		float hDist = Vector3.Distance(closestNode.transform.position, dest.transform.position);
+		float fDist = gDist + hDist;
+		
+		openNodes.Add(closestNode.GetComponent<Pathnode>());
+		fDistances.Add(fDist);
+		gDistances.Add(gDist);
+		previousNode.Add(this);
+	}
+
+	public void FindPath(Pathnode dest) {
         shortestKnownPath = Mathf.Infinity;
-
-        //add the start node to the open Nodes set
-        openNodes.Add(this);
-        fDistances.Add(Vector3.Distance(transform.position, dest.transform.position));
-        gDistances.Add(0);
-        previousNode.Add(null);
-
 
         while (openNodes.Count > 0) {
             //figure out the node in the open set with the lowest f distance
@@ -80,7 +140,7 @@ public class Pathnode : MonoBehaviour {
 
             //check if this node is the final destination
             if (currentNode == dest) {
-                print("A path to the destination has been found with distance " + gDistances[currentNodeIndex]);
+                print("A path to the destination's nearest node has been found with distance " + gDistances[currentNodeIndex]);
                 if (gDistances[currentNodeIndex] < shortestKnownPath) {
                     shortestKnownPath = gDistances[currentNodeIndex];
                     mostOptimalPrevious = previousNode[currentNodeIndex];
@@ -124,12 +184,16 @@ public class Pathnode : MonoBehaviour {
         if (shortestKnownPath < Mathf.Infinity) {
             // Solution found. 
             currentNode = dest;
+			if (currentNode != destinationNode) {
+				Debug.DrawLine(destinationNode.transform.position, currentNode.transform.position, Color.red, 0.015f);
+			}
             while (currentNode != this) {
                 currentNodeIndex = closedNodes.IndexOf(currentNode);
-                Debug.DrawLine(currentNode.transform.position, previousNodeClosed[currentNodeIndex].transform.position, Color.red, 20);
+                Debug.DrawLine(currentNode.transform.position, previousNodeClosed[currentNodeIndex].transform.position, Color.red, 0.015f);
                 currentNode = previousNodeClosed[currentNodeIndex];
             }
-            print("Destination reached. Shortest path: " + shortestKnownPath);
+			shortestKnownPath += Vector3.Distance(destinationNode.transform.position, dest.transform.position);
+			print("Destination reached. Shortest path: " + shortestKnownPath);
             return;
         }
         // No solution exists?
